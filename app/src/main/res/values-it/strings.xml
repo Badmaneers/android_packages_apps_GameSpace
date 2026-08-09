@@ -87,7 +87,7 @@
     <string name="in_game_calls_received_number">Received call from %1$s</string>
     <string name="in_game_calls_rejected_number">Rejected call from %1$s</string>
     <!-- Danmaku Notification Mode -->
-    <string name="danmaku_notification_mode_title">Danmaku Notification mode</string>
+    <string name="danmaku_notification_mode_title">Notification Style</string>
     <string name="danmaku_notification_mode_summary">Show notification as danmaku aka bullet comments while game is active</string>
     <!-- Custom seekbar -->
     <string name="custom_seekbar_value">Value: <xliff:g id="v">%s</xliff:g></string>
@@ -193,7 +193,53 @@
     <string name="tile_smart_pixels">Smart Pixels</string>
     <string name="tile_screen_record">Screen Record</string>
     <string name="tile_screenshot">Screenshot</string>
-    <!-- Icon Idle Transparency -->
+         <!-- Sliding Pill Notification Style -->
+     <string name="notification_style_title">Notification Style</string>
+     <string name="notification_style_danmaku">Classic Danmaku</string>
+     <string name="notification_style_sliding_pill">Sliding Pill</string>
+
+     <string name="sp_show_icon">Show App Icon</string>
+     <string name="sp_show_sender">Show Sender</string>
+     <string name="sp_show_message">Show Message</string>
+     <string name="sp_capsule_mode">Capsule Mode</string>
+     <string name="sp_slide_across">Slide Across</string>
+     <string name="sp_material_you">Material You Background</string>
+     <string name="sp_use_gradient">Gradient Background</string>
+     <string name="sp_corner_radius">Corner Radius</string>
+     <string name="sp_lane_count">Lane Count</string>
+     <string name="sp_animation_type">Animation</string>
+     <string name="sp_animation_type_slide_right_left">Slide Right to Left</string>
+     <string name="sp_animation_type_slide_left_right">Slide Left to Right</string>
+     <string name="sp_animation_type_fade">Fade</string>
+     <string name="sp_position">Position</string>
+     <string name="sp_position_top">Top</string>
+     <string name="sp_position_upper">Upper Third</string>
+     <string name="sp_position_middle">Middle</string>
+     <string name="sp_position_lower">Lower Third</string>
+     <string name="sp_position_bottom">Bottom</string>
+     <string name="sp_size_mode">Pill Size</string>
+     <string name="sp_size_compact">Compact</string>
+     <string name="sp_size_dynamic">Dynamic</string>
+     <string name="sp_min_width">Min Width</string>
+     <string name="sp_font_size">Font Size</string>
+     <string name="sp_font_color">Font Color</string>
+     <string name="sp_animation_speed">Animation Speed</string>
+     <string name="sp_shadow_strength">Shadow Strength</string>
+     <string name="sp_border_width">Border Width</string>
+     <string name="sp_horizontal_margin">Horizontal Margin</string>
+     <string name="sp_vertical_margin">Vertical Margin</string>
+     <string name="sp_background_opacity">Background Opacity</string>
+     <string name="sp_custom_offset">Custom Offset</string>
+     <string name="sp_overflow_mode">Overflow Mode</string>
+     <string name="sp_overflow_ellipsis">Ellipsis</string>
+     <string name="sp_overflow_marquee">Marquee</string>
+     <string name="sp_overflow_fade">Fade</string>
+     <string name="sp_pill_settings">Impostazioni pillola</string>
+     <string name="sp_direction">Direzione</string>
+     <string name="notification_style_heads_up">Notifica heads-up</string>
+     <string name="apply">Applica</string>
+
+<!-- Icon Idle Transparency -->
     <string name="icon_idle_alpha_title">Icon idle transparency</string>
     <!-- Auto DND -->
     <string name="auto_dnd_title">Auto Do Not Disturb</string>

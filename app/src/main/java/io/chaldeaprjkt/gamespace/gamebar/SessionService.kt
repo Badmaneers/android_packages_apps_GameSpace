@@ -27,7 +27,6 @@ import android.content.res.Configuration
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.util.Log
 import android.view.WindowManager
 import com.android.axion.platform.AxPlatformClient
 import dagger.hilt.android.AndroidEntryPoint
@@ -52,6 +51,7 @@ class SessionService : Hilt_SessionService() {
     @Inject lateinit var gameModeUtils: GameModeUtils
     @Inject lateinit var callListener: CallListener
     @Inject lateinit var danmakuService: DanmakuService
+    @Inject lateinit var slidingPillService: SlidingPillService
     @Inject lateinit var brightnessInteractor: BrightnessInteractor
     @Inject lateinit var fpsInteractor: FpsInteractor
     @Inject lateinit var tileRepository: TileRepository
@@ -69,7 +69,6 @@ class SessionService : Hilt_SessionService() {
     @SuppressLint("WrongConstant")
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "SessionService created")
 
         platform = AxPlatformClient.getInstance()
         platform.init(this)
@@ -104,6 +103,7 @@ class SessionService : Hilt_SessionService() {
             mapperController = mapperController,
         )
         sidebar.onCreate()
+        slidingPillService.init()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -112,7 +112,6 @@ class SessionService : Hilt_SessionService() {
             if (packageName != null) {
                 startGameSession(packageName)
             } else {
-                Log.e(TAG, "No package name provided, stopping")
                 stopSelf()
             }
         }
@@ -122,11 +121,11 @@ class SessionService : Hilt_SessionService() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         sidebar.onConfigurationChanged(newConfig)
+        slidingPillService.updateConfiguration(newConfig)
     }
 
     private fun startGameSession(packageName: String) {
         if (currentPackage == packageName) {
-            Log.d(TAG, "Session already active for $packageName")
             return
         }
         
@@ -134,9 +133,8 @@ class SessionService : Hilt_SessionService() {
             stopGameSession()
         }
         
-        Log.i(TAG, "Starting game session for $packageName")
         currentPackage = packageName
-        
+
         session.unregister()
         session.register(packageName)
         
@@ -150,8 +148,6 @@ class SessionService : Hilt_SessionService() {
     }
 
     private fun stopGameSession() {
-        Log.i(TAG, "Stopping game session")
-
         sidebar.onGameLeave()
         session.unregister()
         callListener.destroy()
@@ -192,18 +188,17 @@ class SessionService : Hilt_SessionService() {
     }
 
     override fun onDestroy() {
-        Log.d(TAG, "SessionService destroyed")
         stopGameSession()
         tileRepository.dispose()
         gameModeUtils.unbind()
         danmakuService.destroy()
+        slidingPillService.destroy()
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
-        const val TAG = "SessionService"
         const val ACTION_START = "game_start"
         const val EXTRA_PACKAGE_NAME = "package_name"
     }

@@ -22,8 +22,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -50,10 +53,15 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import io.chaldeaprjkt.gamespace.ui.components.SlidingPillPreview
 import com.android.axion.compose.scaffold.AxionPinnedTopAppBar
 import io.chaldeaprjkt.gamespace.R
+import io.chaldeaprjkt.gamespace.data.AppSettings
+import io.chaldeaprjkt.gamespace.ui.components.SettingsClickable
 import io.chaldeaprjkt.gamespace.ui.components.SettingsDropdown
 import io.chaldeaprjkt.gamespace.ui.components.SettingsSection
 import io.chaldeaprjkt.gamespace.ui.components.SettingsSlider
@@ -161,6 +169,20 @@ fun SettingsScreen(
                         icon = Icons.Filled.ChatBubble
                     )
 
+                    if (viewModel.danmakuNotification) {
+                        val styleOptions = listOf(
+                            AppSettings.NOTIFICATION_STYLE_DANMAKU to stringResource(R.string.notification_style_danmaku),
+                            AppSettings.NOTIFICATION_STYLE_SLIDING_PILL to stringResource(R.string.notification_style_sliding_pill),
+                        )
+                        SettingsDropdown(
+                            title = stringResource(R.string.notification_style_title),
+                            selectedValue = viewModel.notificationStyle,
+                            options = styleOptions,
+                            onValueChange = { viewModel.updateNotificationStyle(it) },
+                            icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+                        )
+                    }
+
                     SettingsDropdown(
                         title = stringResource(R.string.in_game_calls_title),
                         selectedValue = viewModel.callsMode.toString(),
@@ -241,8 +263,197 @@ fun SettingsScreen(
                 }
             }
 
+            if (viewModel.danmakuNotification && viewModel.notificationStyle == AppSettings.NOTIFICATION_STYLE_SLIDING_PILL) {
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    SettingsSection(title = stringResource(R.string.notification_style_sliding_pill)) {
+                        SlidingPillSettingsContent(viewModel)
+                    }
+                }
+            }
+
         }
     }
+}
+
+@Composable
+private fun SlidingPillSettingsContent(viewModel: SettingsViewModel) {
+    LaunchedEffect(Unit) { viewModel.refreshSlidingPillSettings() }
+    val animationOptions = listOf(
+        "slide_right_left" to stringResource(R.string.sp_animation_type_slide_right_left),
+        "slide_left_right" to stringResource(R.string.sp_animation_type_slide_left_right),
+        "fade" to stringResource(R.string.sp_animation_type_fade),
+    )
+    val positionOptions = listOf(
+        "top" to stringResource(R.string.sp_position_top),
+        "upper_third" to stringResource(R.string.sp_position_upper),
+        "middle" to stringResource(R.string.sp_position_middle),
+        "lower_third" to stringResource(R.string.sp_position_lower),
+        "bottom" to stringResource(R.string.sp_position_bottom),
+        "custom" to stringResource(R.string.sp_custom_offset),
+    )
+    val sizeOptions = listOf(
+        "compact" to stringResource(R.string.sp_size_compact),
+        "dynamic" to stringResource(R.string.sp_size_dynamic),
+    )
+    val overflowOptions = listOf(
+        "ellipsis" to stringResource(R.string.sp_overflow_ellipsis),
+        "marquee" to stringResource(R.string.sp_overflow_marquee),
+        "fade" to stringResource(R.string.sp_overflow_fade),
+    )
+
+    SlidingPillPreview(
+        animationType = viewModel.slidingPillAnimationType,
+        animationSpeedSeconds = viewModel.slidingPillAnimationSpeed,
+        capsuleMode = viewModel.slidingPillCapsuleMode,
+        showIcon = viewModel.slidingPillShowIcon,
+        showSender = viewModel.slidingPillShowSender,
+        showMessage = viewModel.slidingPillShowMessage,
+        fontSizeSp = viewModel.slidingPillFontSize,
+        backgroundOpacityPercent = viewModel.slidingPillBackgroundOpacity,
+        shadowStrengthPercent = viewModel.slidingPillShadowStrength,
+    )
+
+    SettingsSwitch(
+        title = stringResource(R.string.sp_show_icon),
+        checked = viewModel.slidingPillShowIcon,
+        onCheckedChange = { viewModel.updateSlidingPillShowIcon(it) },
+        icon = Icons.Filled.ChatBubble
+    )
+    SettingsSwitch(
+        title = stringResource(R.string.sp_show_sender),
+        checked = viewModel.slidingPillShowSender,
+        onCheckedChange = { viewModel.updateSlidingPillShowSender(it) },
+        icon = Icons.Filled.ChatBubble
+    )
+    SettingsSwitch(
+        title = stringResource(R.string.sp_show_message),
+        checked = viewModel.slidingPillShowMessage,
+        onCheckedChange = { viewModel.updateSlidingPillShowMessage(it) },
+        icon = Icons.Filled.ChatBubble
+    )
+    SettingsSwitch(
+        title = stringResource(R.string.sp_capsule_mode),
+        checked = viewModel.slidingPillCapsuleMode,
+        onCheckedChange = { viewModel.updateSlidingPillCapsuleMode(it) },
+        icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+    )
+    SettingsDropdown(
+        title = stringResource(R.string.sp_animation_type),
+        selectedValue = viewModel.slidingPillAnimationType,
+        options = animationOptions,
+        onValueChange = { viewModel.updateSlidingPillAnimationType(it) },
+        icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+    )
+    if (viewModel.slidingPillAnimationType != "fade") {
+        SettingsSwitch(
+            title = stringResource(R.string.sp_slide_across),
+            checked = viewModel.slidingPillSlideAcross,
+            onCheckedChange = { viewModel.updateSlidingPillSlideAcross(it) },
+            icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+        )
+    }
+    Text(
+        text = stringResource(R.string.sp_position),
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+    Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        positionOptions.chunked(2).forEach { chunk ->
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                chunk.forEach { (key, label) ->
+                    val isSelected = key == viewModel.slidingPillPosition
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { viewModel.updateSlidingPillPosition(key) },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                else MaterialTheme.colorScheme.surfaceBright
+                        ),
+                        shape = MaterialTheme.shapes.large
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    SettingsDropdown(
+        title = stringResource(R.string.sp_size_mode),
+        selectedValue = viewModel.slidingPillSize,
+        options = sizeOptions,
+        onValueChange = { viewModel.updateSlidingPillSize(it) },
+        icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+    )
+    SettingsSlider(
+        title = stringResource(R.string.sp_lane_count),
+        value = viewModel.slidingPillLaneCount.toFloat(),
+        onValueChange = { viewModel.updateSlidingPillLaneCount(it.toInt()) },
+        valueRange = 1f..8f,
+        steps = 6,
+        valueLabel = viewModel.slidingPillLaneCount.toString(),
+        icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+    )
+    SettingsSlider(
+        title = stringResource(R.string.sp_font_size),
+        value = viewModel.slidingPillFontSize.toFloat(),
+        onValueChange = { viewModel.updateSlidingPillFontSize(it.toInt()) },
+        valueRange = 10f..24f,
+        steps = 13,
+        valueLabel = "${viewModel.slidingPillFontSize}sp",
+        icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+    )
+    SettingsDropdown(
+        title = stringResource(R.string.sp_overflow_mode),
+        selectedValue = viewModel.slidingPillOverflowMode,
+        options = overflowOptions,
+        onValueChange = { viewModel.updateSlidingPillOverflowMode(it) },
+        icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+    )
+    SettingsSlider(
+        title = stringResource(R.string.sp_animation_speed),
+        value = viewModel.slidingPillAnimationSpeed.toFloat(),
+        onValueChange = { viewModel.updateSlidingPillAnimationSpeed(it.toInt()) },
+        valueRange = 1f..10f,
+        steps = 8,
+        valueLabel = "${viewModel.slidingPillAnimationSpeed}s",
+        icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+    )
+    SettingsSlider(
+        title = stringResource(R.string.sp_background_opacity),
+        value = viewModel.slidingPillBackgroundOpacity.toFloat(),
+        onValueChange = { viewModel.updateSlidingPillBackgroundOpacity(it.toInt()) },
+        valueRange = 0f..100f,
+        steps = 99,
+        valueLabel = "${viewModel.slidingPillBackgroundOpacity}%",
+        icon = painterResource(R.drawable.materialsymbols_ic_opacity_rounded_filled)
+    )
+    SettingsSlider(
+        title = stringResource(R.string.sp_shadow_strength),
+        value = viewModel.slidingPillShadowStrength.toFloat(),
+        onValueChange = { viewModel.updateSlidingPillShadowStrength(it.toInt()) },
+        valueRange = 0f..100f,
+        steps = 99,
+        valueLabel = "${viewModel.slidingPillShadowStrength}%",
+        icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+    )
 }
 
 @Composable

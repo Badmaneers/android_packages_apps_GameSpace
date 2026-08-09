@@ -67,12 +67,17 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.pointer.*
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import io.chaldeaprjkt.gamespace.R
+import io.chaldeaprjkt.gamespace.data.AppSettings
 import io.chaldeaprjkt.gamespace.data.SystemSettings
 import io.chaldeaprjkt.gamespace.gamebar.brightness.*
 import io.chaldeaprjkt.gamespace.gamebar.fps.*
 import io.chaldeaprjkt.gamespace.gamebar.tiles.*
 import io.chaldeaprjkt.gamespace.settings.SettingsActivity
+import io.chaldeaprjkt.gamespace.ui.components.SettingsSlider
+import io.chaldeaprjkt.gamespace.ui.components.SlidingPillPreview
 import io.chaldeaprjkt.gamespace.utils.GameModeUtils
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -213,10 +218,13 @@ fun PanelContent(
     }
     val pagerState = rememberPagerState { pages.size }
 
-    Column(
-        modifier = modifier.padding(start = 4.dp, end = 4.dp, bottom = 0.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+    var showPillCustomization by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        Column(
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 0.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
         if (tileRepository.isBrightnessVisible.value) {
             Row(
                 modifier = Modifier
@@ -252,6 +260,8 @@ fun PanelContent(
                             key(tile.id) {
                                 TileButton(
                                     tile = tile,
+                                    onLongClick = if (tile.id == "notification_mode")
+                                        ({ showPillCustomization = true }) else null,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -286,6 +296,53 @@ fun PanelContent(
                 }
             }
         }
+    }
+
+    if (showPillCustomization) {
+        Popup(
+            onDismissRequest = { showPillCustomization = false },
+            properties = PopupProperties(focusable = true, dismissOnBackPress = true)
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { showPillCustomization = false }
+                        )
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .widthIn(max = 320.dp)
+                            .clickable( // swallow taps so they don't fall through to the scrim
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {}
+                            ),
+                        shape = RoundedCornerShape(20.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+                    ) {
+                        PillCustomizationContent(
+                            appSettings = tileRepository.appSettings,
+                            systemSettings = tileRepository.systemSettings,
+                            onDismiss = { showPillCustomization = false },
+                            onApply = { tileRepository.refreshNotificationLabel() },
+                        )
+                    }
+                }
+            }
+        }
+    }
     }
 }
 
@@ -427,7 +484,7 @@ private fun TopRowHeader(
 
 @Composable
 private fun InfoRow(
-    batteryInfo: BatteryInfo, 
+    batteryInfo: BatteryInfo,
     modeColor: Color,
     currentMode: GameMode) {
     Row(
@@ -825,7 +882,11 @@ fun SettingToggleRow(
 }
 
 @Composable
-fun TileButton(tile: TileAction, modifier: Modifier = Modifier) {
+fun TileButton(
+    tile: TileAction,
+    onLongClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
     val isEnabled by tile.observeEnabled()
     val bgColor = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceBright
     val fgColor = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
@@ -854,10 +915,12 @@ fun TileButton(tile: TileAction, modifier: Modifier = Modifier) {
                 .size(48.dp)
                 .clip(CircleShape)
                 .background(bgColor)
-                .clickable(
+                .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
-                ) { tile.toggle() },
+                    onClick = { tile.toggle() },
+                    onLongClick = onLongClick,
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -877,6 +940,211 @@ fun TileButton(tile: TileAction, modifier: Modifier = Modifier) {
                 .width(64.dp)
                 .basicMarquee(),
         )
+    }
+}
+
+@Composable
+private fun PillCustomizationContent(
+    appSettings: AppSettings,
+    systemSettings: SystemSettings,
+    onDismiss: () -> Unit,
+    onApply: () -> Unit = {},
+) {
+    var localDanmakuEnabled by remember { mutableStateOf(appSettings.danmakuNotification) }
+    var localStyle by remember { mutableStateOf(appSettings.notificationStyle) }
+    var localCapsuleMode by remember { mutableStateOf(appSettings.slidingPillCapsuleMode) }
+    var localShowIcon by remember { mutableStateOf(appSettings.slidingPillShowIcon) }
+    var localShowSender by remember { mutableStateOf(appSettings.slidingPillShowSender) }
+    var localShowMessage by remember { mutableStateOf(appSettings.slidingPillShowMessage) }
+    var localSlideAcross by remember { mutableStateOf(appSettings.slidingPillSlideAcross) }
+    var localAnimationType by remember { mutableStateOf(appSettings.slidingPillAnimationType) }
+    var localFontSize by remember { mutableStateOf(appSettings.slidingPillFontSize) }
+    var localBackgroundOpacity by remember { mutableStateOf(appSettings.slidingPillBackgroundOpacity) }
+    var localShadowStrength by remember { mutableStateOf(appSettings.slidingPillShadowStrength) }
+    var localAnimationSpeed by remember { mutableStateOf(appSettings.slidingPillAnimationSpeed) }
+    var localPillSize by remember { mutableStateOf(appSettings.slidingPillSize) }
+    var localOverflowMode by remember { mutableStateOf(appSettings.slidingPillOverflowMode) }
+
+    val isSlidingPill = localDanmakuEnabled && localStyle == AppSettings.NOTIFICATION_STYLE_SLIDING_PILL
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .heightIn(max = 480.dp)
+            .verticalScroll(scrollState)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Notification Style", style = MaterialTheme.typography.titleMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            StyleChip(stringResource(R.string.notification_style_danmaku), selected = localDanmakuEnabled && localStyle == AppSettings.NOTIFICATION_STYLE_DANMAKU, modifier = Modifier.weight(1f)) {
+                localDanmakuEnabled = true; localStyle = AppSettings.NOTIFICATION_STYLE_DANMAKU
+            }
+            StyleChip(stringResource(R.string.notification_style_sliding_pill), selected = isSlidingPill, modifier = Modifier.weight(1f)) {
+                localDanmakuEnabled = true; localStyle = AppSettings.NOTIFICATION_STYLE_SLIDING_PILL
+            }
+            StyleChip(stringResource(R.string.notification_style_heads_up), selected = !localDanmakuEnabled, modifier = Modifier.weight(1f)) {
+                localDanmakuEnabled = false
+            }
+        }
+
+        if (isSlidingPill) {
+            HorizontalDivider()
+            SlidingPillPreview(
+                animationType = localAnimationType,
+                animationSpeedSeconds = localAnimationSpeed,
+                capsuleMode = localCapsuleMode,
+                showIcon = localShowIcon,
+                showSender = localShowSender,
+                showMessage = localShowMessage,
+                fontSizeSp = localFontSize,
+                backgroundOpacityPercent = localBackgroundOpacity,
+                shadowStrengthPercent = localShadowStrength,
+                slideAcross = localSlideAcross,
+            )
+            Text(stringResource(R.string.sp_pill_settings), style = MaterialTheme.typography.titleSmall)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SettingsRow(stringResource(R.string.sp_capsule_mode)) {
+                    Switch(checked = localCapsuleMode, onCheckedChange = { localCapsuleMode = it })
+                }
+                SettingsRow(stringResource(R.string.sp_show_icon)) {
+                    Switch(checked = localShowIcon, onCheckedChange = { localShowIcon = it })
+                }
+                SettingsRow(stringResource(R.string.sp_show_sender)) {
+                    Switch(checked = localShowSender, onCheckedChange = { localShowSender = it })
+                }
+                SettingsRow(stringResource(R.string.sp_show_message)) {
+                    Switch(checked = localShowMessage, onCheckedChange = { localShowMessage = it })
+                }
+                SettingsRow(stringResource(R.string.sp_slide_across)) {
+                    Switch(checked = localSlideAcross, onCheckedChange = { localSlideAcross = it })
+                }
+            }
+            Text(stringResource(R.string.sp_direction), style = MaterialTheme.typography.titleSmall)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StyleChip(stringResource(R.string.sp_animation_type_slide_right_left), selected = localAnimationType == "slide_right_left", modifier = Modifier.weight(1f)) {
+                    localAnimationType = "slide_right_left"
+                }
+                StyleChip(stringResource(R.string.sp_animation_type_slide_left_right), selected = localAnimationType == "slide_left_right", modifier = Modifier.weight(1f)) {
+                    localAnimationType = "slide_left_right"
+                }
+            }
+            Text(stringResource(R.string.sp_overflow_mode), style = MaterialTheme.typography.titleSmall)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StyleChip(stringResource(R.string.sp_overflow_ellipsis), selected = localOverflowMode == "ellipsis", modifier = Modifier.weight(1f)) {
+                    localOverflowMode = "ellipsis"
+                }
+                StyleChip(stringResource(R.string.sp_overflow_marquee), selected = localOverflowMode == "marquee", modifier = Modifier.weight(1f)) {
+                    localOverflowMode = "marquee"
+                }
+                StyleChip(stringResource(R.string.sp_overflow_fade), selected = localOverflowMode == "fade", modifier = Modifier.weight(1f)) {
+                    localOverflowMode = "fade"
+                }
+            }
+            Text(stringResource(R.string.sp_size_mode), style = MaterialTheme.typography.titleSmall)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StyleChip(stringResource(R.string.sp_size_compact), selected = localPillSize == "compact", modifier = Modifier.weight(1f)) {
+                    localPillSize = "compact"
+                }
+                StyleChip(stringResource(R.string.sp_size_dynamic), selected = localPillSize == "dynamic", modifier = Modifier.weight(1f)) {
+                    localPillSize = "dynamic"
+                }
+            }
+            SettingsSlider(
+                title = stringResource(R.string.sp_font_size),
+                value = localFontSize.toFloat(),
+                onValueChange = { localFontSize = it.toInt() },
+                valueRange = 10f..24f,
+                steps = 14,
+                valueLabel = "${localFontSize}sp"
+            )
+            SettingsSlider(
+                title = stringResource(R.string.sp_background_opacity),
+                value = localBackgroundOpacity.toFloat(),
+                onValueChange = { localBackgroundOpacity = it.toInt() },
+                valueRange = 0f..100f,
+                valueLabel = "${localBackgroundOpacity}%"
+            )
+            SettingsSlider(
+                title = stringResource(R.string.sp_shadow_strength),
+                value = localShadowStrength.toFloat(),
+                onValueChange = { localShadowStrength = it.toInt() },
+                valueRange = 0f..100f,
+                valueLabel = "${localShadowStrength}%"
+            )
+            SettingsSlider(
+                title = stringResource(R.string.sp_animation_speed),
+                value = localAnimationSpeed.toFloat(),
+                onValueChange = { localAnimationSpeed = it.toInt() },
+                valueRange = 1f..10f,
+                steps = 8,
+                valueLabel = "${localAnimationSpeed}s"
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+        ) {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            Button(onClick = {
+                appSettings.danmakuNotification = localDanmakuEnabled
+                if (localDanmakuEnabled) {
+                    appSettings.notificationStyle = localStyle
+                    systemSettings.headsup = false
+                } else {
+                    systemSettings.headsup = true
+                }
+                appSettings.slidingPillCapsuleMode = localCapsuleMode
+                appSettings.slidingPillShowIcon = localShowIcon
+                appSettings.slidingPillShowSender = localShowSender
+                appSettings.slidingPillShowMessage = localShowMessage
+                appSettings.slidingPillFontSize = localFontSize
+                appSettings.slidingPillBackgroundOpacity = localBackgroundOpacity
+                appSettings.slidingPillShadowStrength = localShadowStrength
+                appSettings.slidingPillAnimationSpeed = localAnimationSpeed
+                appSettings.slidingPillAnimationType = localAnimationType
+                appSettings.slidingPillSlideAcross = localSlideAcross
+                appSettings.slidingPillSize = localPillSize
+                appSettings.slidingPillOverflowMode = localOverflowMode
+                onApply()
+                onDismiss()
+            }) { Text(stringResource(R.string.apply)) }
+        }
+    }
+}
+
+@Composable
+private fun StyleChip(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    FilterChip(
+        modifier = modifier,
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    )
+}
+
+@Composable
+private fun SettingsRow(title: String, content: @Composable () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, style = MaterialTheme.typography.bodyMedium)
+        content()
     }
 }
 
@@ -1344,4 +1612,3 @@ data class BatteryInfo(
     val level: Int = -1,
     val temperatureC: Float = 0f
 )
-

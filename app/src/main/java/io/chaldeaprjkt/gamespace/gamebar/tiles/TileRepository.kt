@@ -21,16 +21,17 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemProperties
-import android.provider.Settings
 import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.android.axion.platform.AxFeatureState
 import com.android.axion.platform.AxPlatformClient
@@ -108,8 +109,8 @@ private data class PlatformTileSpec(
 @Singleton
 class TileRepository @Inject constructor(
     private val context: Context,
-    private val appSettings: AppSettings,
-    private val systemSettings: SystemSettings,
+    val appSettings: AppSettings,
+    val systemSettings: SystemSettings,
 ) {
     private lateinit var platform: AxPlatformClient
     private lateinit var defaultTiles: List<TileAction>
@@ -134,6 +135,13 @@ class TileRepository @Inject constructor(
 
     val isBrightnessVisible: MutableState<Boolean> = mutableStateOf(appSettings.brightnessEnabled)
     val isFpsGraphVisible: MutableState<Boolean> = mutableStateOf(appSettings.fpsGraphEnabled)
+
+    var notificationLabelVersion by mutableStateOf(0)
+        private set
+
+    fun refreshNotificationLabel() {
+        notificationLabelVersion++
+    }
 
     fun init(platform: AxPlatformClient) {
         this.platform = platform
@@ -213,16 +221,61 @@ class TileRepository @Inject constructor(
         platformTileSpecs.mapTo(this) { platformTile(it) }
 
         add(
-            ToggleableTile(
-                id = "notification",
-                label = context.getString(R.string.tile_danmaku),
-                icon = R.drawable.materialsymbols_ic_notifications_rounded_filled,
-                state = mutableStateOf(appSettings.danmakuNotification),
-                setter = {
-                    appSettings.danmakuNotification = it
-                    systemSettings.headsup = !it
-                },
-            )
+            object : TileAction {
+                override val id = "notification_mode"
+                override val icon = R.drawable.materialsymbols_ic_notifications_rounded_filled
+
+                override val label: String
+                    get() {
+                        notificationLabelVersion
+                        return getLabelForMode(currentMode)
+                    }
+
+                override val isEnabled: Boolean get() = true
+
+                @Composable override fun observeEnabled(): State<Boolean> = rememberUpdatedState(true)
+
+                override fun toggle() {
+                    val next = when {
+                        !appSettings.danmakuNotification -> 0
+                        appSettings.notificationStyle == AppSettings.NOTIFICATION_STYLE_SLIDING_PILL -> 2
+                        else -> 1
+                    }
+                    applyMode(next)
+                    refreshNotificationLabel()
+                }
+
+                private val currentMode: Int
+                    get() {
+                        if (!appSettings.danmakuNotification) return 2
+                        return if (appSettings.notificationStyle == AppSettings.NOTIFICATION_STYLE_SLIDING_PILL) 1 else 0
+                    }
+
+                private fun applyMode(mode: Int) {
+                    when (mode) {
+                        0 -> {
+                            appSettings.danmakuNotification = true
+                            appSettings.notificationStyle = AppSettings.NOTIFICATION_STYLE_DANMAKU
+                            systemSettings.headsup = false
+                        }
+                        1 -> {
+                            appSettings.danmakuNotification = true
+                            appSettings.notificationStyle = AppSettings.NOTIFICATION_STYLE_SLIDING_PILL
+                            systemSettings.headsup = false
+                        }
+                        else -> {
+                            appSettings.danmakuNotification = false
+                            systemSettings.headsup = true
+                        }
+                    }
+                }
+
+                private fun getLabelForMode(mode: Int): String = when (mode) {
+                    0 -> context.getString(R.string.tile_danmaku)
+                    1 -> context.getString(R.string.tile_sliding_pill)
+                    else -> context.getString(R.string.tile_heads_up)
+                }
+            }
         )
 
         add(
@@ -269,7 +322,7 @@ class TileRepository @Inject constructor(
                 label = context.getString(R.string.tile_settings),
                 icon = R.drawable.materialsymbols_ic_settings_rounded_filled,
                 action = {
-                    val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                    val intent = Intent(context, io.chaldeaprjkt.gamespace.settings.SettingsActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
                     context.startActivity(intent)
@@ -393,11 +446,6 @@ class TileRepository @Inject constructor(
                 AxPlatformFeature.ONE_HANDED_MODE,
                 R.drawable.materialsymbols_ic_phone_android_rounded_filled,
                 R.string.tile_one_handed,
-            ),
-            PlatformTileSpec(
-                AxPlatformFeature.HEADS_UP,
-                R.drawable.materialsymbols_ic_notifications_active_rounded_filled,
-                R.string.tile_heads_up,
             ),
             PlatformTileSpec(
                 AxPlatformFeature.AUTO_SYNC,
