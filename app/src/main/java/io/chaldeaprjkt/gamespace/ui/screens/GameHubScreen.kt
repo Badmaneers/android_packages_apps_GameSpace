@@ -34,8 +34,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -53,6 +55,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -81,15 +84,14 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -101,6 +103,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import io.chaldeaprjkt.gamespace.R
 import io.chaldeaprjkt.gamespace.data.AppSettings
 import io.chaldeaprjkt.gamespace.ui.components.AddGameTile
@@ -110,9 +113,12 @@ import io.chaldeaprjkt.gamespace.ui.components.HubBackground
 import io.chaldeaprjkt.gamespace.ui.components.gameModeLabel
 import io.chaldeaprjkt.gamespace.ui.viewmodel.RegisteredGame
 import io.chaldeaprjkt.gamespace.ui.viewmodel.SettingsViewModel
+import io.chaldeaprjkt.gamespace.utils.UiTicks
 import androidx.core.graphics.drawable.toBitmap
+import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
 import java.util.Date
 
@@ -288,39 +294,86 @@ private fun GameLibraryPanel(
     onAddGame: () -> Unit,
     onRemoveGame: (String) -> Unit,
 ) {
+    val listState = rememberLazyListState()
+    val snapBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
+    var selectionFromScroll by remember { mutableStateOf(false) }
+    var animatingSelection by remember { mutableStateOf(false) }
+
+    LaunchedEffect(listState, games.size) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo }
+            .map { visible ->
+                val viewportCenter = listState.layoutInfo.viewportSize.width / 2f
+                visible
+                    .filter { it.key is String }
+                    .minByOrNull { abs((it.offset + it.size / 2f) - viewportCenter) }
+                    ?.key as? String
+            }
+            .distinctUntilChanged()
+            .collect { pkg ->
+                if (animatingSelection) return@collect
+                val game = games.firstOrNull { it.packageName == pkg }
+                if (game != null && pkg != selectedGame?.packageName) {
+                    selectionFromScroll = true
+                    if (selectedGame != null) UiTicks.tick()
+                    onSelectGame(game)
+                }
+            }
+    }
+
+    LaunchedEffect(selectedGame?.packageName) {
+        if (selectionFromScroll) {
+            selectionFromScroll = false
+            return@LaunchedEffect
+        }
+        val index = games.indexOfFirst { it.packageName == selectedGame?.packageName }
+        if (index >= 0) {
+            animatingSelection = true
+            listState.animateScrollToItem(index)
+            animatingSelection = false
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = 4.dp),
     ) {
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            item {
-                AddGameTile(
-                    onClick = onAddGame,
-                    modifier = Modifier.height(140.dp).width(140.dp),
-                )
-            }
-            items(games, key = { it.packageName }) { game ->
-                val isSelected = game.packageName == selectedGame?.packageName
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val tileSize = 140.dp
+            val snapPadding = (maxWidth - tileSize) / 2
 
-                GameTile(
-                    game = game,
-                    isSelected = isSelected,
-                    onClick = { onSelectGame(game) },
-                    onLongClick = { onViewDetails() },
-                    modifier = Modifier
-                        .height(if (isSelected) 170.dp else 140.dp)
-                        .width(if (isSelected) 170.dp else 140.dp)
-                        .animateItem(
-                            fadeInSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-                            placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                        ),
-                )
+            LazyRow(
+                state = listState,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = snapPadding),
+                flingBehavior = snapBehavior,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                items(games, key = { it.packageName }) { game ->
+                    val isSelected = game.packageName == selectedGame?.packageName
+
+                    GameTile(
+                        game = game,
+                        isSelected = isSelected,
+                        onClick = { onSelectGame(game) },
+                        onLongClick = { onViewDetails() },
+                        modifier = Modifier
+                            .size(tileSize)
+                            .zIndex(if (isSelected) 1f else 0f)
+                            .animateItem(
+                                fadeInSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                                placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                            ),
+                    )
+                }
+                item {
+                    AddGameTile(
+                        onClick = onAddGame,
+                        modifier = Modifier.size(tileSize),
+                    )
+                }
             }
         }
 

@@ -19,6 +19,7 @@ package io.chaldeaprjkt.gamespace
 import android.app.Application
 import android.util.Log
 import dagger.hilt.android.HiltAndroidApp
+import io.chaldeaprjkt.gamespace.utils.UiTicks
 
 @HiltAndroidApp(Application::class)
 class GameSpace : Hilt_GameSpace() {
@@ -28,5 +29,6 @@ class GameSpace : Hilt_GameSpace() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "Application created")
+        UiTicks.init(this)
     }
 }

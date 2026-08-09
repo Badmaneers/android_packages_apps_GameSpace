@@ -55,7 +55,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -63,6 +65,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
 import io.chaldeaprjkt.gamespace.R
 import io.chaldeaprjkt.gamespace.ui.viewmodel.RegisteredGame
+import io.chaldeaprjkt.gamespace.utils.UiTicks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -79,6 +82,7 @@ fun GameTile(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val haptic = LocalHapticFeedback.current
 
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) 0.96f else 1f,
@@ -119,8 +123,8 @@ fun GameTile(
         modifier = modifier
             .aspectRatio(1f)
             .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
+                scaleX = pressScale * (if (isSelected) 1.15f else 1f)
+                scaleY = pressScale * (if (isSelected) 1.15f else 1f)
             }
             .clip(TileShape)
             .background(gradientBrush)
@@ -128,7 +132,11 @@ fun GameTile(
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = onClick,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                    UiTicks.tick()
+                    onClick()
+                },
                 onLongClick = onLongClick,
             ),
         contentAlignment = Alignment.Center,
@@ -170,13 +178,20 @@ fun AddGameTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val haptic = LocalHapticFeedback.current
     Box(
         modifier = modifier
             .aspectRatio(1f)
             .clip(TileShape)
             .background(Color(0xFF161A1F))
             .border(1.dp, Color.White.copy(alpha = 0.08f), TileShape)
-            .combinedClickable(onClick = onClick),
+            .combinedClickable(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                    UiTicks.tick()
+                    onClick()
+                },
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Column(
