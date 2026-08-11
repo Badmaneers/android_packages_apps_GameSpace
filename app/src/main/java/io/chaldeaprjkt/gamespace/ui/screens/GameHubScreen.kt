@@ -102,6 +102,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.chaldeaprjkt.gamespace.R
+import io.chaldeaprjkt.gamespace.data.AppSettings
 import io.chaldeaprjkt.gamespace.ui.components.AddGameTile
 import io.chaldeaprjkt.gamespace.ui.components.FeaturedGameCard
 import io.chaldeaprjkt.gamespace.ui.components.GameTile
@@ -632,6 +633,22 @@ private fun GlobalSettingsPanel(
                         checked = viewModel.danmakuNotification,
                         onCheckedChange = { viewModel.updateDanmakuNotification(it) },
                     )
+                    if (viewModel.danmakuNotification) {
+                        HubSectionLabel(stringResource(R.string.notification_style_title))
+                        HubSelector(
+                            options = listOf(
+                                AppSettings.NOTIFICATION_STYLE_DANMAKU to stringResource(R.string.notification_style_danmaku),
+                                AppSettings.NOTIFICATION_STYLE_SLIDING_PILL to stringResource(R.string.notification_style_sliding_pill),
+                            ),
+                            selectedKey = viewModel.notificationStyle,
+                            onSelect = { viewModel.updateNotificationStyle(it) },
+                        )
+
+                        if (viewModel.notificationStyle == AppSettings.NOTIFICATION_STYLE_SLIDING_PILL) {
+                            HubSectionLabel(stringResource(R.string.notification_style_sliding_pill))
+                            SlidingPillHubSettings(viewModel)
+                        }
+                    }
                     HubToggle(
                         label = stringResource(R.string.auto_dnd_title),
                         checked = viewModel.autoDnd,
@@ -679,6 +696,55 @@ private fun GlobalSettingsPanel(
                 .width(300.dp),
         )
     }
+}
+
+@Composable
+private fun SlidingPillHubSettings(viewModel: SettingsViewModel) {
+    val animOptions = listOf(
+        "slide_right_left" to stringResource(R.string.sp_animation_type_slide_right_left),
+        "slide_left_right" to stringResource(R.string.sp_animation_type_slide_left_right),
+        "fade" to stringResource(R.string.sp_animation_type_fade),
+    )
+
+    HubToggle(
+        label = stringResource(R.string.sp_show_sender),
+        checked = viewModel.slidingPillShowSender,
+        onCheckedChange = { viewModel.updateSlidingPillShowSender(it) },
+    )
+    HubToggle(
+        label = stringResource(R.string.sp_show_message),
+        checked = viewModel.slidingPillShowMessage,
+        onCheckedChange = { viewModel.updateSlidingPillShowMessage(it) },
+    )
+    if (viewModel.slidingPillAnimationType != "fade") {
+        HubToggle(
+            label = stringResource(R.string.sp_slide_across),
+            checked = viewModel.slidingPillSlideAcross,
+            onCheckedChange = { viewModel.updateSlidingPillSlideAcross(it) },
+        )
+    }
+
+    HubSectionLabel(stringResource(R.string.sp_animation_type))
+    HubSelector(
+        options = animOptions,
+        selectedKey = viewModel.slidingPillAnimationType,
+        onSelect = { viewModel.updateSlidingPillAnimationType(it) },
+    )
+
+    HubSlider(
+        label = stringResource(R.string.sp_animation_speed),
+        value = viewModel.slidingPillAnimationSpeed.toFloat(),
+        onValueChange = { viewModel.updateSlidingPillAnimationSpeed(it.toInt()) },
+        valueRange = 1f..10f,
+        valueLabel = "${viewModel.slidingPillAnimationSpeed}s",
+    )
+    HubSlider(
+        label = stringResource(R.string.sp_background_opacity),
+        value = viewModel.slidingPillBackgroundOpacity.toFloat(),
+        onValueChange = { viewModel.updateSlidingPillBackgroundOpacity(it.toInt()) },
+        valueRange = 0f..100f,
+        valueLabel = "${viewModel.slidingPillBackgroundOpacity}%",
+    )
 }
 
 @Composable

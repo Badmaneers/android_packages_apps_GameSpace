@@ -95,6 +95,82 @@ class AppSettings @Inject constructor(private val context: Context) {
         get() = db.getBoolean(KEY_AUTO_DND, false)
         set(value) = db.edit().putBoolean(KEY_AUTO_DND, value).apply()
 
+    var notificationStyle: String
+        get() = db.getString(KEY_NOTIFICATION_STYLE, NOTIFICATION_STYLE_DANMAKU) ?: NOTIFICATION_STYLE_DANMAKU
+        set(value) = db.edit().putString(KEY_NOTIFICATION_STYLE, value).apply()
+
+    var slidingPillAnimationType: String
+        get() = db.getString(KEY_SLIDING_PILL_ANIMATION, "slide_right_left") ?: "slide_right_left"
+        set(value) = db.edit().putString(KEY_SLIDING_PILL_ANIMATION, value).apply()
+
+    var slidingPillMaxWidth: Int
+        get() = db.getInt(KEY_SLIDING_PILL_MAX_WIDTH, 320)
+        set(value) = db.edit().putInt(KEY_SLIDING_PILL_MAX_WIDTH, value).apply()
+
+    var slidingPillMinWidth: Int
+        get() = db.getInt(KEY_SLIDING_PILL_MIN_WIDTH, 120)
+        set(value) = db.edit().putInt(KEY_SLIDING_PILL_MIN_WIDTH, value).apply()
+
+    var slidingPillFontColor: Int
+        get() = db.getInt(KEY_SLIDING_PILL_FONT_COLOR, -1)
+        set(value) = db.edit().putInt(KEY_SLIDING_PILL_FONT_COLOR, value).apply()
+
+    var slidingPillBackgroundColor: Int
+        get() = db.getInt(KEY_SLIDING_PILL_BG_COLOR, 0)
+        set(value) = db.edit().putInt(KEY_SLIDING_PILL_BG_COLOR, value).apply()
+
+    var slidingPillBackgroundOpacity: Int
+        get() = db.getInt(KEY_SLIDING_PILL_BG_OPACITY, 85)
+        set(value) = db.edit().putInt(KEY_SLIDING_PILL_BG_OPACITY, value).apply()
+
+    var slidingPillUseMaterialYou: Boolean
+        get() = db.getBoolean(KEY_SLIDING_PILL_MATERIAL_YOU, true)
+        set(value) = db.edit().putBoolean(KEY_SLIDING_PILL_MATERIAL_YOU, value).apply()
+
+    var slidingPillShowSender: Boolean
+        get() = db.getBoolean(KEY_SLIDING_PILL_SHOW_SENDER, true)
+        set(value) = db.edit().putBoolean(KEY_SLIDING_PILL_SHOW_SENDER, value).apply()
+
+    var slidingPillShowMessage: Boolean
+        get() = db.getBoolean(KEY_SLIDING_PILL_SHOW_MESSAGE, true)
+        set(value) = db.edit().putBoolean(KEY_SLIDING_PILL_SHOW_MESSAGE, value).apply()
+
+    var slidingPillSlideAcross: Boolean
+        get() = db.getBoolean(KEY_SLIDING_PILL_SLIDE_ACROSS, false)
+        set(value) = db.edit().putBoolean(KEY_SLIDING_PILL_SLIDE_ACROSS, value).apply()
+
+    var slidingPillAnimationSpeed: Int
+        get() = db.getInt(KEY_SLIDING_PILL_ANIMATION_SPEED, 1)
+        set(value) = db.edit().putInt(KEY_SLIDING_PILL_ANIMATION_SPEED, value).apply()
+
+    var slidingPillBorderWidth: Int
+        get() = db.getInt(KEY_SLIDING_PILL_BORDER_WIDTH, 0)
+        set(value) = db.edit().putInt(KEY_SLIDING_PILL_BORDER_WIDTH, value).apply()
+
+    var slidingPillBorderColor: Int
+        get() = db.getInt(KEY_SLIDING_PILL_BORDER_COLOR, 0)
+        set(value) = db.edit().putInt(KEY_SLIDING_PILL_BORDER_COLOR, value).apply()
+
+    var slidingPillHorizontalMargin: Int
+        get() = db.getInt(KEY_SLIDING_PILL_H_MARGIN, 8)
+        set(value) = db.edit().putInt(KEY_SLIDING_PILL_H_MARGIN, value).apply()
+
+    var slidingPillVerticalMargin: Int
+        get() = db.getInt(KEY_SLIDING_PILL_V_MARGIN, 4)
+        set(value) = db.edit().putInt(KEY_SLIDING_PILL_V_MARGIN, value).apply()
+
+    var slidingPillUseGradient: Boolean
+        get() = db.getBoolean(KEY_SLIDING_PILL_USE_GRADIENT, false)
+        set(value) = db.edit().putBoolean(KEY_SLIDING_PILL_USE_GRADIENT, value).apply()
+
+    var slidingPillGradientStart: Int
+        get() = db.getInt(KEY_SLIDING_PILL_GRADIENT_START, 0)
+        set(value) = db.edit().putInt(KEY_SLIDING_PILL_GRADIENT_START, value).apply()
+
+    var slidingPillGradientEnd: Int
+        get() = db.getInt(KEY_SLIDING_PILL_GRADIENT_END, 0)
+        set(value) = db.edit().putInt(KEY_SLIDING_PILL_GRADIENT_END, value).apply()
+
     companion object {
         const val KEY_AUTO_BRIGHTNESS_DISABLE = "gamespace_auto_brightness_disabled"
         const val KEY_3SCREENSHOT_DISABLE = "gamespace_tfgesture_disabled"
@@ -111,5 +187,28 @@ class AppSettings @Inject constructor(private val context: Context) {
         const val KEY_CALL_OVERLAY_ENABLED = "call_overlay_enabled"
         const val KEY_ICON_IDLE_ALPHA = "gamespace_icon_idle_alpha"
         const val KEY_AUTO_DND = "gamespace_auto_dnd"
+
+        const val KEY_NOTIFICATION_STYLE = "gamespace_notification_style"
+        const val NOTIFICATION_STYLE_DANMAKU = "classic_danmaku"
+        const val NOTIFICATION_STYLE_SLIDING_PILL = "sliding_pill"
+
+        const val KEY_SLIDING_PILL_ANIMATION = "gamespace_sp_animation"
+        const val KEY_SLIDING_PILL_MAX_WIDTH = "gamespace_sp_max_width"
+        const val KEY_SLIDING_PILL_MIN_WIDTH = "gamespace_sp_min_width"
+        const val KEY_SLIDING_PILL_FONT_COLOR = "gamespace_sp_font_color"
+        const val KEY_SLIDING_PILL_BG_COLOR = "gamespace_sp_bg_color"
+        const val KEY_SLIDING_PILL_BG_OPACITY = "gamespace_sp_bg_opacity"
+        const val KEY_SLIDING_PILL_MATERIAL_YOU = "gamespace_sp_material_you"
+        const val KEY_SLIDING_PILL_SHOW_SENDER = "gamespace_sp_show_sender"
+        const val KEY_SLIDING_PILL_SHOW_MESSAGE = "gamespace_sp_show_message"
+        const val KEY_SLIDING_PILL_SLIDE_ACROSS = "gamespace_sp_slide_across"
+        const val KEY_SLIDING_PILL_ANIMATION_SPEED = "gamespace_sp_anim_speed"
+        const val KEY_SLIDING_PILL_BORDER_WIDTH = "gamespace_sp_border_width"
+        const val KEY_SLIDING_PILL_BORDER_COLOR = "gamespace_sp_border_color"
+        const val KEY_SLIDING_PILL_H_MARGIN = "gamespace_sp_h_margin"
+        const val KEY_SLIDING_PILL_V_MARGIN = "gamespace_sp_v_margin"
+        const val KEY_SLIDING_PILL_USE_GRADIENT = "gamespace_sp_use_gradient"
+        const val KEY_SLIDING_PILL_GRADIENT_START = "gamespace_sp_gradient_start"
+        const val KEY_SLIDING_PILL_GRADIENT_END = "gamespace_sp_gradient_end"
     }
 }

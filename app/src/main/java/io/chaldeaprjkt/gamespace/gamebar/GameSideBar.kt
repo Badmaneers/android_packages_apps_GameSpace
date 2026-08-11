@@ -60,6 +60,7 @@ import io.chaldeaprjkt.gamespace.gamebar.brightness.*
 import io.chaldeaprjkt.gamespace.gamebar.fps.*
 import io.chaldeaprjkt.gamespace.gamebar.mapper.MapperController
 import io.chaldeaprjkt.gamespace.gamebar.tiles.*
+import io.chaldeaprjkt.gamespace.ui.components.SlidingPillPreview
 import io.chaldeaprjkt.gamespace.utils.*
 import java.math.RoundingMode
 import java.text.DecimalFormat
@@ -349,6 +350,9 @@ class GameSidebar(
         val apps = remember { getQuickStartApps(context) }
         val dismissing by panelDismissing
 
+        var pillCustomizing by remember { mutableStateOf(false) }
+        var previewState by remember { mutableStateOf(PillPreviewState.fromAppSettings(appSettings)) }
+
         var entered by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { entered = true }
 
@@ -394,7 +398,7 @@ class GameSidebar(
         val spaceBelow = (screenHeightDp - barTopDp - navBottomDp - 16.dp).coerceAtLeast(0.dp)
         val spaceAbove = (barTopDp - navBottomDp - 16.dp).coerceAtLeast(0.dp)
         val bottomAligned = spaceBelow < 240.dp && spaceAbove > spaceBelow
-        val panelMaxHeight = (if (bottomAligned) spaceAbove else spaceBelow).coerceIn(240.dp, 520.dp)
+        val panelMaxHeight = (if (bottomAligned) spaceAbove else spaceBelow).coerceIn(240.dp, 680.dp)
         val alignment = when {
             bottomAligned && circleOnLeft -> Alignment.BottomStart
             bottomAligned && !circleOnLeft -> Alignment.BottomEnd
@@ -413,6 +417,20 @@ class GameSidebar(
                 ) { if (!dismissing) requestDismissPanel() },
             contentAlignment = alignment,
         ) {
+            if (pillCustomizing && previewState.visible) {
+                SlidingPillPreview(
+                    appSettings = appSettings,
+                    animationType = previewState.animationType,
+                    animationSpeedSeconds = previewState.animationSpeedSeconds,
+                    showSender = previewState.showSender,
+                    showMessage = previewState.showMessage,
+                    backgroundOpacityPercent = previewState.backgroundOpacityPercent,
+                    slideAcross = previewState.slideAcross,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 8.dp),
+                )
+            }
             val edgePadding = if (bottomAligned) navBottomDp + 8.dp else barTopDp
             Box(
                 modifier = Modifier
@@ -442,6 +460,9 @@ class GameSidebar(
                     systemSettings = settings,
                     tileRepository = tileRepository,
                     maxHeight = panelMaxHeight,
+                    pillCustomizing = pillCustomizing,
+                    onPillCustomizingChange = { pillCustomizing = it },
+                    onPreviewStateChanged = { previewState = it },
                 )
             }
         }

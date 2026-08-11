@@ -73,6 +73,24 @@ class SettingsViewModel @Inject constructor(
     var autoDnd by mutableStateOf(appSettings.autoDnd)
         private set
 
+    var notificationStyle by mutableStateOf(appSettings.notificationStyle)
+        private set
+
+    var slidingPillShowSender by mutableStateOf(appSettings.slidingPillShowSender)
+        private set
+    var slidingPillShowMessage by mutableStateOf(appSettings.slidingPillShowMessage)
+        private set
+    var slidingPillAnimationType by mutableStateOf(appSettings.slidingPillAnimationType)
+        private set
+    var slidingPillMaxWidth by mutableIntStateOf(appSettings.slidingPillMaxWidth)
+        private set
+    var slidingPillAnimationSpeed by mutableIntStateOf(appSettings.slidingPillAnimationSpeed)
+        private set
+    var slidingPillBackgroundOpacity by mutableIntStateOf(appSettings.slidingPillBackgroundOpacity)
+        private set
+    var slidingPillSlideAcross by mutableStateOf(appSettings.slidingPillSlideAcross)
+        private set
+
     val isBypassSupported = Build.MANUFACTURER.equals("Google", ignoreCase = true) 
             || SystemProperties.getBoolean("persist.sys.ax_chg_bypass", false)
 
@@ -138,6 +156,29 @@ class SettingsViewModel @Inject constructor(
     fun updateAutoDnd(enabled: Boolean) {
         autoDnd = enabled
         appSettings.autoDnd = enabled
+    }
+
+    fun updateNotificationStyle(style: String) {
+        notificationStyle = style
+        appSettings.notificationStyle = style
+    }
+
+    fun updateSlidingPillShowSender(enabled: Boolean) { slidingPillShowSender = enabled; appSettings.slidingPillShowSender = enabled }
+    fun updateSlidingPillShowMessage(enabled: Boolean) { slidingPillShowMessage = enabled; appSettings.slidingPillShowMessage = enabled }
+    fun updateSlidingPillAnimationType(type: String) { slidingPillAnimationType = type; appSettings.slidingPillAnimationType = type }
+    fun updateSlidingPillMaxWidth(width: Int) { slidingPillMaxWidth = width; appSettings.slidingPillMaxWidth = width }
+    fun updateSlidingPillAnimationSpeed(speed: Int) { slidingPillAnimationSpeed = speed; appSettings.slidingPillAnimationSpeed = speed }
+    fun updateSlidingPillBackgroundOpacity(opacity: Int) { slidingPillBackgroundOpacity = opacity; appSettings.slidingPillBackgroundOpacity = opacity }
+    fun updateSlidingPillSlideAcross(enabled: Boolean) { slidingPillSlideAcross = enabled; appSettings.slidingPillSlideAcross = enabled }
+
+    fun refreshSlidingPillSettings() {
+        slidingPillShowSender = appSettings.slidingPillShowSender
+        slidingPillShowMessage = appSettings.slidingPillShowMessage
+        slidingPillAnimationType = appSettings.slidingPillAnimationType
+        slidingPillMaxWidth = appSettings.slidingPillMaxWidth
+        slidingPillAnimationSpeed = appSettings.slidingPillAnimationSpeed
+        slidingPillBackgroundOpacity = appSettings.slidingPillBackgroundOpacity
+        slidingPillSlideAcross = appSettings.slidingPillSlideAcross
     }
 
     fun loadRegisteredGames() {

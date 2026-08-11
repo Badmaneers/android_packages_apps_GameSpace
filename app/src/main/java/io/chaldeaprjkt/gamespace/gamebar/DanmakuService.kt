@@ -29,11 +29,9 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
-import android.os.RemoteException
 import android.os.UserHandle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.WindowManager
@@ -55,6 +53,7 @@ import io.chaldeaprjkt.gamespace.gamebar.DanmakuServiceListener
 
 interface DanmakuServiceInterface {
     val danmakuNotificationMode: Boolean
+    val isActiveForCurrentStyle: Boolean
     fun showNotificationAsOverlay(danmakuText: String)
     fun getApplabel(packageName: String): String
 }
@@ -124,23 +123,15 @@ class DanmakuService @Inject constructor(
 
     private fun registerListener() {
         val componentName = ComponentName(context, DanmakuService::class.java)
-        try {
-            notificationListener.registerAsSystemService(
-                context,
-                componentName,
-                UserHandle.USER_CURRENT
-            )
-        } catch (e: RemoteException) {
-            Log.e(TAG, "RemoteException while registering danmaku service")
-        }
+        notificationListener.registerAsSystemService(
+            context,
+            componentName,
+            UserHandle.USER_CURRENT
+        )
     }
 
     private fun unregisterListener() {
-        try {
-            notificationListener.unregisterAsSystemService()
-        } catch (e: RemoteException) {
-            Log.e(TAG, "RemoteException while registering danmaku service")
-        }
+        notificationListener.unregisterAsSystemService()
     }
 
     private fun updateParams() {
@@ -186,6 +177,9 @@ class DanmakuService @Inject constructor(
 
     override val danmakuNotificationMode: Boolean
         get() = appSettings.danmakuNotification
+
+    override val isActiveForCurrentStyle: Boolean
+        get() = appSettings.notificationStyle == AppSettings.NOTIFICATION_STYLE_DANMAKU
 
     private fun pushNotification() {
         val end = getOffsetForPosition().toFloat()
@@ -252,8 +246,6 @@ class DanmakuService @Inject constructor(
 
     companion object {
     
-        private const val TAG = "DanmakuService"
-
         private const val SLIDE_ANIMATION_DISTANCE_FACTOR = 0.5f
 
         private const val APPEAR_ANIMATION_DURATION = 500L

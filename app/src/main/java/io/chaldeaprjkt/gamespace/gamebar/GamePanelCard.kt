@@ -68,11 +68,14 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.pointer.*
 import io.chaldeaprjkt.gamespace.R
+import io.chaldeaprjkt.gamespace.data.AppSettings
 import io.chaldeaprjkt.gamespace.data.SystemSettings
 import io.chaldeaprjkt.gamespace.gamebar.brightness.*
 import io.chaldeaprjkt.gamespace.gamebar.fps.*
 import io.chaldeaprjkt.gamespace.gamebar.tiles.*
 import io.chaldeaprjkt.gamespace.settings.SettingsActivity
+import io.chaldeaprjkt.gamespace.ui.components.SettingsSlider
+import io.chaldeaprjkt.gamespace.ui.components.SlidingPillPreview
 import io.chaldeaprjkt.gamespace.utils.GameModeUtils
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -94,6 +97,9 @@ fun GamePanelCard(
     systemSettings: SystemSettings,
     tileRepository: TileRepository,
     maxHeight: Dp = Dp.Unspecified,
+    pillCustomizing: Boolean = false,
+    onPillCustomizingChange: (Boolean) -> Unit = {},
+    onPreviewStateChanged: (PillPreviewState) -> Unit = {},
 ) {
     val panelWidth = 300.dp
 
@@ -131,7 +137,12 @@ fun GamePanelCard(
             fpsInteractor = fpsInteractor,
             time = time,
             tileRepository = tileRepository,
+            systemSettings = systemSettings,
+            appSettings = tileRepository.appSettings,
             maxHeight = maxHeight,
+            pillCustomizing = pillCustomizing,
+            onPillCustomizingChange = onPillCustomizingChange,
+            onPreviewStateChanged = onPreviewStateChanged,
         )
     }
 }
@@ -147,7 +158,12 @@ fun GamePanelContent(
     fpsInteractor: FpsInteractor,
     time: String,
     tileRepository: TileRepository,
+    systemSettings: SystemSettings,
+    appSettings: AppSettings,
     maxHeight: Dp = Dp.Unspecified,
+    pillCustomizing: Boolean = false,
+    onPillCustomizingChange: (Boolean) -> Unit = {},
+    onPreviewStateChanged: (PillPreviewState) -> Unit = {},
 ) {
     var isEditing by remember { mutableStateOf(false) }
 
@@ -155,6 +171,24 @@ fun GamePanelContent(
 
     val resolvedMaxHeight = if (maxHeight != Dp.Unspecified) maxHeight else {
         (LocalConfiguration.current.screenHeightDp - 64).dp
+    }
+
+    if (pillCustomizing) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = resolvedMaxHeight)
+                .padding(top = 4.dp, start = 12.dp, bottom = 12.dp, end = 12.dp)
+        ) {
+            PillCustomizationContent(
+                appSettings = appSettings,
+                systemSettings = systemSettings,
+                onDismiss = { onPillCustomizingChange(false) },
+                onApply = { tileRepository.refreshNotificationLabel() },
+                onPreviewStateChanged = onPreviewStateChanged,
+            )
+        }
+        return
     }
 
     Column(
@@ -187,7 +221,8 @@ fun GamePanelContent(
                 tileRepository = tileRepository,
                 currentMode = selectedMode,
                 onEditClick = { isEditing = true },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                onPillCustomizingChange = onPillCustomizingChange,
             )
         } else {
             TileEditPanel(
@@ -204,7 +239,8 @@ fun PanelContent(
     tileRepository: TileRepository,
     currentMode: GameMode,
     onEditClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPillCustomizingChange: (Boolean) -> Unit = {},
 ) {
     val tiles = tileRepository.tiles
     val tilesPerPage = 8
@@ -213,10 +249,11 @@ fun PanelContent(
     }
     val pagerState = rememberPagerState { pages.size }
 
-    Column(
-        modifier = modifier.padding(start = 4.dp, end = 4.dp, bottom = 0.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+    Box(modifier = modifier) {
+        Column(
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 0.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
         if (tileRepository.isBrightnessVisible.value) {
             Row(
                 modifier = Modifier
@@ -252,6 +289,8 @@ fun PanelContent(
                             key(tile.id) {
                                 TileButton(
                                     tile = tile,
+                                    onLongClick = if (tile.id == "notification_mode")
+                                        ({ onPillCustomizingChange(true) }) else null,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -285,6 +324,7 @@ fun PanelContent(
                     )
                 }
             }
+        }
         }
     }
 }
@@ -427,7 +467,7 @@ private fun TopRowHeader(
 
 @Composable
 private fun InfoRow(
-    batteryInfo: BatteryInfo, 
+    batteryInfo: BatteryInfo,
     modeColor: Color,
     currentMode: GameMode) {
     Row(
@@ -825,7 +865,11 @@ fun SettingToggleRow(
 }
 
 @Composable
-fun TileButton(tile: TileAction, modifier: Modifier = Modifier) {
+fun TileButton(
+    tile: TileAction,
+    onLongClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
     val isEnabled by tile.observeEnabled()
     val bgColor = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceBright
     val fgColor = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
@@ -854,10 +898,12 @@ fun TileButton(tile: TileAction, modifier: Modifier = Modifier) {
                 .size(48.dp)
                 .clip(CircleShape)
                 .background(bgColor)
-                .clickable(
+                .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
-                ) { tile.toggle() },
+                    onClick = { tile.toggle() },
+                    onLongClick = onLongClick,
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -877,6 +923,203 @@ fun TileButton(tile: TileAction, modifier: Modifier = Modifier) {
                 .width(64.dp)
                 .basicMarquee(),
         )
+    }
+}
+
+data class PillPreviewState(
+    val animationType: String,
+    val animationSpeedSeconds: Int,
+    val showSender: Boolean,
+    val showMessage: Boolean,
+    val backgroundOpacityPercent: Int,
+    val slideAcross: Boolean,
+    val visible: Boolean,
+) {
+    companion object {
+        fun fromAppSettings(appSettings: AppSettings): PillPreviewState {
+            val visible = appSettings.danmakuNotification &&
+                appSettings.notificationStyle == AppSettings.NOTIFICATION_STYLE_SLIDING_PILL
+            return PillPreviewState(
+                animationType = appSettings.slidingPillAnimationType,
+                animationSpeedSeconds = appSettings.slidingPillAnimationSpeed,
+                showSender = appSettings.slidingPillShowSender,
+                showMessage = appSettings.slidingPillShowMessage,
+                backgroundOpacityPercent = appSettings.slidingPillBackgroundOpacity,
+                slideAcross = appSettings.slidingPillSlideAcross,
+                visible = visible,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PillCustomizationContent(
+    appSettings: AppSettings,
+    systemSettings: SystemSettings,
+    onDismiss: () -> Unit,
+    onApply: () -> Unit = {},
+    onPreviewStateChanged: (PillPreviewState) -> Unit = {},
+) {
+    var localDanmakuEnabled by remember { mutableStateOf(appSettings.danmakuNotification) }
+    var localStyle by remember { mutableStateOf(appSettings.notificationStyle) }
+    var localShowSender by remember { mutableStateOf(appSettings.slidingPillShowSender) }
+    var localShowMessage by remember { mutableStateOf(appSettings.slidingPillShowMessage) }
+    var localSlideAcross by remember { mutableStateOf(appSettings.slidingPillSlideAcross) }
+    var localAnimationType by remember { mutableStateOf(appSettings.slidingPillAnimationType) }
+    var localBackgroundOpacity by remember { mutableStateOf(appSettings.slidingPillBackgroundOpacity) }
+    var localAnimationSpeed by remember { mutableStateOf(appSettings.slidingPillAnimationSpeed) }
+
+    val isSlidingPill = localDanmakuEnabled && localStyle == AppSettings.NOTIFICATION_STYLE_SLIDING_PILL
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(
+        localDanmakuEnabled, localStyle, localAnimationType, localAnimationSpeed,
+        localShowSender, localShowMessage, localBackgroundOpacity, localSlideAcross,
+    ) {
+        onPreviewStateChanged(
+            PillPreviewState(
+                animationType = localAnimationType,
+                animationSpeedSeconds = localAnimationSpeed,
+                showSender = localShowSender,
+                showMessage = localShowMessage,
+                backgroundOpacityPercent = localBackgroundOpacity,
+                slideAcross = localSlideAcross,
+                visible = isSlidingPill,
+            )
+        )
+    }
+
+    val applyChanges: () -> Unit = {
+        appSettings.danmakuNotification = localDanmakuEnabled
+        if (localDanmakuEnabled) {
+            appSettings.notificationStyle = localStyle
+            systemSettings.headsup = false
+        } else {
+            systemSettings.headsup = true
+        }
+        appSettings.slidingPillShowSender = localShowSender
+        appSettings.slidingPillShowMessage = localShowMessage
+        appSettings.slidingPillBackgroundOpacity = localBackgroundOpacity
+        appSettings.slidingPillAnimationSpeed = localAnimationSpeed
+        appSettings.slidingPillAnimationType = localAnimationType
+        appSettings.slidingPillSlideAcross = localSlideAcross
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 12.dp, top = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = stringResource(R.string.cancel),
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Button(onClick = {
+                applyChanges()
+                onApply()
+                onDismiss()
+            }) { Text(stringResource(R.string.apply)) }
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(scrollState)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+        Text("Notification Style", style = MaterialTheme.typography.titleMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            StyleChip(stringResource(R.string.notification_style_danmaku), selected = localDanmakuEnabled && localStyle == AppSettings.NOTIFICATION_STYLE_DANMAKU, modifier = Modifier.weight(1f)) {
+                localDanmakuEnabled = true; localStyle = AppSettings.NOTIFICATION_STYLE_DANMAKU
+            }
+            StyleChip(stringResource(R.string.notification_style_sliding_pill), selected = isSlidingPill, modifier = Modifier.weight(1f)) {
+                localDanmakuEnabled = true; localStyle = AppSettings.NOTIFICATION_STYLE_SLIDING_PILL
+            }
+            StyleChip(stringResource(R.string.notification_style_heads_up), selected = !localDanmakuEnabled, modifier = Modifier.weight(1f)) {
+                localDanmakuEnabled = false
+            }
+        }
+
+        if (isSlidingPill) {
+            Text(stringResource(R.string.sp_pill_settings), style = MaterialTheme.typography.titleSmall)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SettingsRow(stringResource(R.string.sp_show_sender)) {
+                    Switch(checked = localShowSender, onCheckedChange = { localShowSender = it })
+                }
+                SettingsRow(stringResource(R.string.sp_show_message)) {
+                    Switch(checked = localShowMessage, onCheckedChange = { localShowMessage = it })
+                }
+                if (localAnimationType != "fade") {
+                    SettingsRow(stringResource(R.string.sp_slide_across)) {
+                        Switch(checked = localSlideAcross, onCheckedChange = { localSlideAcross = it })
+                    }
+                }
+            }
+            Text(stringResource(R.string.sp_animation_type), style = MaterialTheme.typography.titleSmall)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StyleChip(stringResource(R.string.sp_animation_type_slide_right_left), selected = localAnimationType == "slide_right_left", modifier = Modifier.weight(1f)) {
+                    localAnimationType = "slide_right_left"
+                }
+                StyleChip(stringResource(R.string.sp_animation_type_slide_left_right), selected = localAnimationType == "slide_left_right", modifier = Modifier.weight(1f)) {
+                    localAnimationType = "slide_left_right"
+                }
+                StyleChip(stringResource(R.string.sp_animation_type_fade), selected = localAnimationType == "fade", modifier = Modifier.weight(1f)) {
+                    localAnimationType = "fade"
+                }
+            }
+            SettingsSlider(
+                title = stringResource(R.string.sp_background_opacity),
+                value = localBackgroundOpacity.toFloat(),
+                onValueChange = { localBackgroundOpacity = it.toInt() },
+                valueRange = 0f..100f,
+                valueLabel = "${localBackgroundOpacity}%",
+                titleStyle = MaterialTheme.typography.labelSmall,
+            )
+            SettingsSlider(
+                title = stringResource(R.string.sp_animation_speed),
+                value = localAnimationSpeed.toFloat(),
+                onValueChange = { localAnimationSpeed = it.toInt() },
+                valueRange = 1f..10f,
+                steps = 8,
+                valueLabel = "${localAnimationSpeed}s",
+                titleStyle = MaterialTheme.typography.labelSmall,
+            )
+        }
+
+        }
+    }
+}
+
+@Composable
+private fun StyleChip(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    FilterChip(
+        modifier = modifier,
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    )
+}
+
+@Composable
+private fun SettingsRow(title: String, content: @Composable () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, style = MaterialTheme.typography.labelSmall)
+        content()
     }
 }
 
@@ -1344,4 +1587,3 @@ data class BatteryInfo(
     val level: Int = -1,
     val temperatureC: Float = 0f
 )
-

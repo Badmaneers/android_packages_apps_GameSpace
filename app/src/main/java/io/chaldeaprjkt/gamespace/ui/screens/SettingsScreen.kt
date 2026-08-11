@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,9 +52,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import io.chaldeaprjkt.gamespace.ui.components.SlidingPillPreview
 import com.android.axion.compose.scaffold.AxionPinnedTopAppBar
 import io.chaldeaprjkt.gamespace.R
+import io.chaldeaprjkt.gamespace.data.AppSettings
+import io.chaldeaprjkt.gamespace.ui.components.SettingsClickable
 import io.chaldeaprjkt.gamespace.ui.components.SettingsDropdown
 import io.chaldeaprjkt.gamespace.ui.components.SettingsSection
 import io.chaldeaprjkt.gamespace.ui.components.SettingsSlider
@@ -161,6 +166,20 @@ fun SettingsScreen(
                         icon = Icons.Filled.ChatBubble
                     )
 
+                    if (viewModel.danmakuNotification) {
+                        val styleOptions = listOf(
+                            AppSettings.NOTIFICATION_STYLE_DANMAKU to stringResource(R.string.notification_style_danmaku),
+                            AppSettings.NOTIFICATION_STYLE_SLIDING_PILL to stringResource(R.string.notification_style_sliding_pill),
+                        )
+                        SettingsDropdown(
+                            title = stringResource(R.string.notification_style_title),
+                            selectedValue = viewModel.notificationStyle,
+                            options = styleOptions,
+                            onValueChange = { viewModel.updateNotificationStyle(it) },
+                            icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+                        )
+                    }
+
                     SettingsDropdown(
                         title = stringResource(R.string.in_game_calls_title),
                         selectedValue = viewModel.callsMode.toString(),
@@ -241,8 +260,81 @@ fun SettingsScreen(
                 }
             }
 
+            if (viewModel.danmakuNotification && viewModel.notificationStyle == AppSettings.NOTIFICATION_STYLE_SLIDING_PILL) {
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    SettingsSection(title = stringResource(R.string.notification_style_sliding_pill)) {
+                        SlidingPillSettingsContent(viewModel)
+                    }
+                }
+            }
+
         }
     }
+}
+
+@Composable
+private fun SlidingPillSettingsContent(viewModel: SettingsViewModel) {
+    LaunchedEffect(Unit) { viewModel.refreshSlidingPillSettings() }
+    val animationOptions = listOf(
+        "slide_right_left" to stringResource(R.string.sp_animation_type_slide_right_left),
+        "slide_left_right" to stringResource(R.string.sp_animation_type_slide_left_right),
+        "fade" to stringResource(R.string.sp_animation_type_fade),
+    )
+
+    SlidingPillPreview(
+        animationType = viewModel.slidingPillAnimationType,
+        animationSpeedSeconds = viewModel.slidingPillAnimationSpeed,
+        showSender = viewModel.slidingPillShowSender,
+        showMessage = viewModel.slidingPillShowMessage,
+        backgroundOpacityPercent = viewModel.slidingPillBackgroundOpacity,
+    )
+
+    SettingsSwitch(
+        title = stringResource(R.string.sp_show_sender),
+        checked = viewModel.slidingPillShowSender,
+        onCheckedChange = { viewModel.updateSlidingPillShowSender(it) },
+        icon = Icons.Filled.ChatBubble
+    )
+    SettingsSwitch(
+        title = stringResource(R.string.sp_show_message),
+        checked = viewModel.slidingPillShowMessage,
+        onCheckedChange = { viewModel.updateSlidingPillShowMessage(it) },
+        icon = Icons.Filled.ChatBubble
+    )
+    SettingsDropdown(
+        title = stringResource(R.string.sp_animation_type),
+        selectedValue = viewModel.slidingPillAnimationType,
+        options = animationOptions,
+        onValueChange = { viewModel.updateSlidingPillAnimationType(it) },
+        icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+    )
+    if (viewModel.slidingPillAnimationType != "fade") {
+        SettingsSwitch(
+            title = stringResource(R.string.sp_slide_across),
+            checked = viewModel.slidingPillSlideAcross,
+            onCheckedChange = { viewModel.updateSlidingPillSlideAcross(it) },
+            icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+        )
+    }
+    SettingsSlider(
+        title = stringResource(R.string.sp_animation_speed),
+        value = viewModel.slidingPillAnimationSpeed.toFloat(),
+        onValueChange = { viewModel.updateSlidingPillAnimationSpeed(it.toInt()) },
+        valueRange = 1f..10f,
+        steps = 8,
+        valueLabel = "${viewModel.slidingPillAnimationSpeed}s",
+        icon = painterResource(R.drawable.materialsymbols_ic_notifications_rounded_filled)
+    )
+    SettingsSlider(
+        title = stringResource(R.string.sp_background_opacity),
+        value = viewModel.slidingPillBackgroundOpacity.toFloat(),
+        onValueChange = { viewModel.updateSlidingPillBackgroundOpacity(it.toInt()) },
+        valueRange = 0f..100f,
+        steps = 99,
+        valueLabel = "${viewModel.slidingPillBackgroundOpacity}%",
+        icon = painterResource(R.drawable.materialsymbols_ic_opacity_rounded_filled)
+    )
 }
 
 @Composable
